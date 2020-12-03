@@ -20,7 +20,7 @@ begin
 							  FPR::Float64, FNR::Float64)
 		counts = DefaultDict(0)
 		for i=1:population
-			cov_pos = i % (1/prevalence) == 0.0
+			cov_pos = i % floor(1/prevalence) == 0.0
 
 			if cov_pos
 				rand() < FNR ? test_pos = false : test_pos = true
@@ -58,7 +58,7 @@ In case of no symptoms one can use the prevalence as the prior, but when there a
 begin
 	FPR = 0.01
 	FNR = 0.1
-	prevalence = 0.05
+	prevalence = 1/1000
 end
 
 # ╔═╡ e2983572-352e-11eb-3c3e-8fe7faaacc28
@@ -107,13 +107,45 @@ The probability of having the disease is 8.2%
 "
 
 # ╔═╡ bd404cc8-352f-11eb-24dc-576026e2cda8
-function compute_covid_prob(;prevalence, FPR, FNR) 
-	prob_pos_test = FPR*(1-prevalence) + (1-FNR)*prevalence
-	100 * (1 - FNR) * prevalence / prob_pos_test
+function compute_covid_prob(;prevalence, FPR, FNR, test=true)
+	if test == true # test came positive
+		prob_pos_test = FPR*(1-prevalence) + (1-FNR)*prevalence
+		prob = 100 * (1 - FNR) * prevalence / prob_pos_test
+	else # test came negative
+		prob_pos_test = (1-FPR)*(1-prevalence) + FNR*prevalence
+		prob = 100 * (1-FPR)*prevalence/prob_pos_test
+	end
+	prob
 end
 
 # ╔═╡ 5d6de6e6-3531-11eb-12b4-d5ef9b250ad6
-compute_covid_prob(prevalence=prevalence, FPR=FPR, FNR=FNR)
+compute_covid_prob(prevalence=prevalence, FPR=FPR, FNR=FNR, test=true)
+
+# ╔═╡ 5cb7871a-3591-11eb-10a7-e95562f28d9b
+compute_covid_prob(prevalence=prevalence, FPR=FPR, FNR=FNR, test=false)
+
+# ╔═╡ c13c8ce8-353d-11eb-362e-239be46b5263
+begin
+	using Plots	
+	p = plot(xlabel="prevalence", ylabel="% prob of infection",
+			 yticks = 0:3:60, title="what if I tested positive?")
+	for prev=0.001:0.001:0.01
+		prob = compute_covid_prob(prevalence=prev, FPR=FPR, FNR=FNR, test=true)
+		scatter!(p, [prev], [prob], marker=:x, color="salmon", label="")
+	end
+	p
+end
+
+# ╔═╡ 7e02d618-3591-11eb-102d-c9611669e80b
+begin
+	p2 = plot(xlabel="prevalence", ylabel="% prob of infection",
+			  title="what if I tested negative?")
+	for prev=0.001:0.001:0.01
+		prob = compute_covid_prob(prevalence=prev, FPR=FPR, FNR=FNR, test=false)
+		scatter!(p2, [prev], [prob], marker=:x, color="salmon", label="")
+	end
+	p2
+end
 
 # ╔═╡ addbe57a-3524-11eb-1cda-6b8ab833cf2e
 tree = load("/Users/swairshah/Desktop/testing.png")
@@ -125,7 +157,10 @@ md" We can write a simulation of this tree as follows"
 # ╟─01447f9a-3533-11eb-08ae-5380d56e6e27
 # ╠═3fd25a70-3531-11eb-2efc-2b48eae57cb5
 # ╠═5d6de6e6-3531-11eb-12b4-d5ef9b250ad6
+# ╠═5cb7871a-3591-11eb-10a7-e95562f28d9b
 # ╠═e2983572-352e-11eb-3c3e-8fe7faaacc28
+# ╠═c13c8ce8-353d-11eb-362e-239be46b5263
+# ╠═7e02d618-3591-11eb-102d-c9611669e80b
 # ╟─723f6c92-3511-11eb-329c-e9c2a355f0e9
 # ╠═bd404cc8-352f-11eb-24dc-576026e2cda8
 # ╟─b8789786-3511-11eb-1377-51b8fbff55b7
